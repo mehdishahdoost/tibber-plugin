@@ -74,10 +74,13 @@ class RegistrationTests(unittest.TestCase):
         self.assertNotIn("test-token", repr(state))
         self.assertEqual(register.call_count, 2)
 
-    def test_missing_token_remains_required(self):
+    def test_missing_token_keeps_skill_visible_without_configuring_mcp(self):
         for token in (None, "", "  "):
-            with self.subTest(token=token), self.assertRaisesRegex(RuntimeError, "required"):
-                self.run_registration({}, token=token)
+            with self.subTest(token=token), self.assertLogs("tibber_plugin", level="WARNING"):
+                state, save, register = self.run_registration({}, token=token)
+                self.assertEqual(state, {})
+                save.assert_not_called()
+                self.assertEqual(register.call_count, 2)
 
 
 if __name__ == "__main__":

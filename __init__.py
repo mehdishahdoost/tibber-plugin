@@ -1,19 +1,16 @@
 """Hermes adapter: prompt via plugin.yaml, configure from portable mcp.json."""
 
+import logging
 from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
 
 
 def register(ctx):
     from agent.secret_scope import get_secret
     from hermes_cli.agent_plugins import load_agent_plugin
     from hermes_cli.config import load_config, save_config
-
-    token = get_secret("TIBBER_ACCESS_TOKEN")
-    if not token or not token.strip():
-        raise RuntimeError(
-            "TIBBER_ACCESS_TOKEN is required. Provide it through the Hermes "
-            "plugin installation prompt or the active profile's .env."
-        )
 
     root = Path(__file__).resolve().parent
     # Parse and validate the portable package using Hermes's own adapter. It
@@ -23,6 +20,18 @@ def register(ctx):
         raise RuntimeError("Invalid Tibber package: " + "; ".join(
             diagnostic.message for diagnostic in package.diagnostics
         ))
+    for skill in package.skills:
+        ctx.register_skill(skill.name, skill.skill_md, skill.description, skill.frontmatter)
+
+    # Discovery and catalog validation also run before credentials are supplied.
+    # Keep the skill discoverable, but never configure an unauthenticated server.
+    token = get_secret("TIBBER_ACCESS_TOKEN")
+    if not token or not token.strip():
+        logger.warning(
+            "Tibber MCP setup needs TIBBER_ACCESS_TOKEN. Supply it through "
+            "Hermes's plugin installation prompt and restart Hermes."
+        )
+        return
     server = dict(package.mcp_servers["tibber"])
     config = load_config()
     servers = config.get("mcp_servers")
@@ -43,6 +52,3 @@ def register(ctx):
         save_config({"mcp_servers": {"tibber": server}}, merge_existing=True)
         if load_config().get("mcp_servers", {}).get("tibber") != server:
             raise RuntimeError("Hermes could not save the Tibber MCP configuration.")
-
-    for skill in package.skills:
-        ctx.register_skill(skill.name, skill.skill_md, skill.description, skill.frontmatter)

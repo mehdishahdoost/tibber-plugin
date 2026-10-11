@@ -1,7 +1,9 @@
 name: tibber
-version: 1.0.2
+version: 1.0.3
 description: Tibber MCP integration with required credential setup and electricity summaries.
 author: Mehdi Shahdoost
+homepage: https://github.com/mehdishahdoost/tibber-plugin
+requires_hermes: ">=0.21.6"
 requires_env:
   - name: TIBBER_ACCESS_TOKEN
     description: Personal Tibber access token required to connect to your account.
