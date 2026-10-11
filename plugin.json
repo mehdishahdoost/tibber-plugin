@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "tibber",
+  "version": "1.0.0",
+  "description": "Tibber electricity prices and consumption summaries through MCP.",
+  "author": {
+    "name": "Mehdi Shahdoost"
+  },
+  "keywords": ["tibber", "electricity", "mcp"]
+}

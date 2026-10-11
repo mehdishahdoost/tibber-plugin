@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "tibber": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tibber-mcp-server@0.2.2"],
+      "env": {
+        "TIBBER_ACCESS_TOKEN": "${TIBBER_ACCESS_TOKEN}",
+        "TIBBER_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
