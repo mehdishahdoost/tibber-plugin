@@ -1,0 +1,11 @@
+name: tibber
+version: 1.0.1
+description: Tibber MCP integration with required credential setup and electricity summaries.
+author: Mehdi Shahdoost
+requires_env:
+  - name: TIBBER_ACCESS_TOKEN
+    description: Personal Tibber access token required to connect to your account.
+    url: https://developer.tibber.com/
+    secret: true
+provides_tools: []
+provides_hooks: []
