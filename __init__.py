@@ -32,11 +32,11 @@ def register(ctx):
         raise RuntimeError("Hermes mcp_servers configuration must be a mapping.")
 
     existing = servers.get("tibber")
-    if existing is not None and existing != server:
-        raise RuntimeError(
-            "Existing mcp_servers.tibber differs from mcp.json. It was preserved; "
-            "review/remove the old entry before enabling this plugin."
-        )
+    if existing is not None and not isinstance(existing, dict):
+        raise RuntimeError("Hermes mcp_servers.tibber configuration must be a mapping.")
+    # Native user configuration takes precedence, just as it does when Hermes
+    # loads portable MCP entries. It may use another version, launcher, or env
+    # source; none of those differences should hide the bundled skill.
     if existing is None:
         # Keep the env reference literal; Hermes resolves it at connection time.
         # Merge through Hermes so unrelated user configuration is preserved.

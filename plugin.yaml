@@ -1,5 +1,5 @@
 name: tibber
-version: 1.0.1
+version: 1.0.2
 description: Tibber MCP integration with required credential setup and electricity summaries.
 author: Mehdi Shahdoost
 requires_env:

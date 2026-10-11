@@ -20,7 +20,7 @@ Hermes reads the native plugin.yaml adapter and asks for a missing **TIBBER_ACCE
 
 Enable the plugin when prompted (or use --enable), then restart Hermes. The adapter validates mcp.json and installs its Tibber entry into native MCP configuration automatically. No separate MCP setup prompt is needed. The first server launch downloads tibber-mcp-server@0.2.2 using npx. Requires Node.js 18+, npx on PATH, and Hermes with MCP and portable-package parsing support.
 
-Use skills_list to find tibber:tibber-electricity-summary. Ask Hermes to list your Tibber homes; the MCP tool names start with mcp__tibber__.
+In Hermes CLI, TUI, or Desktop, run `/reload-skills` and invoke `/tibber:tibber-electricity-summary`. You can also ask Hermes to load `tibber:tibber-electricity-summary` with `skill_view`. Ask Hermes to list your Tibber homes; the MCP tool names start with mcp__tibber__.
 
 ## Package layout
 
@@ -35,6 +35,6 @@ The exact upstream skill is preserved in skills/tibber-electricity-summary/refer
 
 ## Existing configurations and removal
 
-A differing mcp_servers.tibber entry is preserved and reported as a conflict. Review/remove that entry and restart Hermes to let the adapter configure it from mcp.json. Other configuration is preserved. The credential stays in .env; config.yaml contains its reference only.
+An existing mcp_servers.tibber entry takes precedence and is reused unchanged, including its command, environment, and enabled setting. The skill still registers. When there is no existing entry, the adapter configures it from mcp.json. Other configuration is preserved. The adapter stores only the credential reference in config.yaml.
 
-Because the adapter installs a native MCP entry, removing/disabling this plugin also requires removing mcp_servers.tibber from the active profile's config.yaml and restarting Hermes. Remove TIBBER_ACCESS_TOKEN from that profile's .env when no longer needed.
+If the adapter created the native MCP entry, remove mcp_servers.tibber from the active profile's config.yaml when uninstalling and restart Hermes. If you already had a Tibber MCP entry, keep it if you still use it independently. Remove TIBBER_ACCESS_TOKEN from that profile's .env when no longer needed.
