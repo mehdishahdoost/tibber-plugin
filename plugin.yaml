@@ -1,5 +1,5 @@
 name: tibber
-version: 1.0.3
+version: 1.0.4
 description: Tibber MCP integration with required credential setup and electricity summaries.
 author: Mehdi Shahdoost
 homepage: https://github.com/mehdishahdoost/tibber-plugin

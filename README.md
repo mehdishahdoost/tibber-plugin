@@ -31,7 +31,7 @@ In Hermes CLI, TUI, or Desktop, run `/reload-skills` and invoke `/tibber:tibber-
 
 Agent Plugins 1.0.0 leaves authentication to clients. Hermes does not prompt for requires_env in a pure portable manifest, which is why the adapter is necessary. Other clients can load plugin.json and mcp.json without executing it. The ${TIBBER_ACCESS_TOKEN} reference is Hermes-specific; other clients need equivalent client-managed credential resolution. Never replace it with a real token in committed files.
 
-The exact upstream skill is preserved in skills/tibber-electricity-summary/references/upstream-SKILL.md at upstream commit 1f41ecdb53b247392791534c5ff4b1271074924d. The active skill changes only metadata.hermes to a JSON string for portable metadata compatibility; its body is unchanged.
+The skill is derived from upstream commit 1f41ecdb53b247392791534c5ff4b1271074924d. Both bundled copies include the catalog review fixes for home selection, profile-scoped caching, and missing MCP guidance. The active skill additionally encodes metadata.hermes as a JSON string for portable metadata compatibility.
 
 ## Existing configurations and removal
 
@@ -47,8 +47,8 @@ This is an independent community integration, not an official Tibber product.
 - The server makes authenticated HTTPS requests to Tibber's GraphQL API at `https://api.tibber.com/v1-beta/gql`. It reads account details, home addresses, prices, consumption, and production history. It does not implement account changes or live WebSocket subscriptions.
 - The adapter reads credentials only through Hermes's profile-aware `get_secret` API. Hermes owns credential prompting and storage; the adapter does not read credential files directly or log the token. The token is passed to the MCP subprocess through its environment.
 - On first configuration, the adapter uses Hermes's configuration API to add the server to the active profile's `config.yaml`. Existing Tibber and unrelated settings are preserved. The MCP entry contains a token reference, not the credential.
-- When invoked, the skill instructs Hermes to read/write `~/.hera/tibber.data` outside the plugin directory. This JSON cache contains home addresses, IDs, timestamps, costs, consumption, and prices, but no credentials. It asks Hermes to use Python through its ordinary tools for calculations and atomic, permission-restricted cache updates; normal tool approvals still apply.
-- The bundled upstream workflow includes a default Amsterdam home. If it cannot uniquely match that home in the account, it asks the user to select one. Reports use the home's timezone and API currency.
+- When invoked, the skill instructs Hermes to read/write `$HERMES_HOME/plugin-data/tibber/tibber.json` inside the active profile’s data directory. This JSON cache contains home addresses, IDs, timestamps, costs, consumption, and prices, but no credentials. It asks Hermes to use Python through its ordinary tools for calculations and atomic, permission-restricted cache updates; normal tool approvals still apply.
+- The workflow selects the only home automatically, or asks the user to choose among multiple homes, and remembers that choice in the cache. Reports use a verified home timezone and API currency; there is no fixed home or timezone default. If the MCP server is unavailable, the skill reports the blocker and suggests plugin installation or a Hermes restart.
 - The plugin has no telemetry, self-updater, scheduled jobs, or custom UI. The server version is pinned; npm resolves its published dependency graph. Catalog plugin updates require review of a new commit pin.
 
 ## Development checks

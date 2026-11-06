@@ -1,7 +1,7 @@
 ---
 name: tibber-electricity-summary
 description: Use when checking Tibber electricity costs and prices.
-version: 0.1.0
+version: 0.1.1
 author: Mehdi Shahdoost
 license: MIT
 platforms: [linux, macos, windows]
@@ -12,7 +12,7 @@ metadata:
 
 # Tibber electricity summary
 
-Use the authenticated Tibber MCP to report month-to-date electricity cost, last month's electricity cost, year-to-date electricity cost, and today's cheapest and most expensive price periods. Cache historical observations in `~/.hera/tibber.data` (this exact path, not `~/.hermes/`). Do not estimate consumption costs by multiplying spot prices by guessed usage.
+Use the authenticated Tibber MCP to report month-to-date electricity cost, last month's electricity cost, year-to-date electricity cost, and today's cheapest and most expensive price periods. Cache historical observations in `$HERMES_HOME/plugin-data/tibber/tibber.json`. Do not estimate consumption costs by multiplying spot prices by guessed usage.
 
 ## When to Use
 
@@ -27,12 +27,12 @@ The Tibber MCP tools must be available. Load their schemas with `tool_describe` 
 - `mcp__tibber__tibber_prices`: `{ "homeId": "..." }`; current, today and available tomorrow prices.
 - `mcp__tibber__tibber_history`: `{ "homeId": "...", "from": "ISO-8601 with offset", "to": "ISO-8601 with offset", "type": "consumption", "resolution": "DAILY" }`; maximum 31 days per request.
 
-If schemas change, use the live schemas rather than guessing parameters. If Tibber MCP is unavailable, use the installation instructions for `tibber-mcp-server` at https://www.npmjs.com/package/tibber-mcp-server to install and configure it. Before modifying Hermes configuration, load the `hermes-agent` and `native-mcp` skills and follow their setup workflows. Read the package's current instructions rather than guessing installation commands or credential requirements. Verify that the Tibber MCP tools are available after setup. If authentication or tools remain unavailable, report the blocker; never invent figures.
+If schemas change, use the live schemas rather than guessing parameters. If Tibber MCP is unavailable, report that the plugin's MCP server is not loaded and suggest `hermes plugins install tibber` or restarting Hermes. Do not install npm packages or modify Hermes configuration from this skill. If authentication or tools remain unavailable, report the blocker; never invent figures.
 
 ## Procedure
 
-1. Obtain current time using `terminal` or Python via `execute_code`, and compute calendar boundaries in the home's timezone with `zoneinfo`. Do not use the conversation date as a live clock. Discover homes with the account tool. Default to the user's primary home at Kempenlaan 11, 1066PW Amsterdam, Netherlands; match the returned address, never assume the first home is primary. If it cannot be matched uniquely, ask the user. Get home details and use its timezone, defaulting to `Europe/Amsterdam` only for the confirmed Amsterdam home. Retain the verified home ID and timezone in the cache.
-2. Read the existing cache with `read_file` if present. A missing file means an empty cache. Reject unsupported schemas or malformed data rather than silently overwriting it. Preserve unrelated homes. Load cached history before planning any history queries.
+1. Resolve the active profile's `HERMES_HOME` and read `$HERMES_HOME/plugin-data/tibber/tibber.json` with `read_file` if present. If `HERMES_HOME` is unavailable, ask for the active profile's data directory rather than guessing a shared path. A missing file means an empty cache. Reject unsupported schemas or malformed data rather than silently overwriting it. Preserve unrelated homes. Load cached history before planning any history queries.
+2. Discover homes with the account tool. Honor an explicit user choice; otherwise reuse cached `selected_home_id` only if it still belongs to the account. With no valid saved choice, select the sole home if there is exactly one; for multiple homes, ask the user and never assume the first home is primary. If there are no homes, report the blocker. Save the selected home ID as `selected_home_id` in the cache. Get home details and use its verified IANA timezone, or reuse the timezone previously confirmed by the user for that home. If neither is available, ask the user and cache their answer for that home. Do not assume a timezone from an address or use a fixed default. Obtain current time using `terminal` or Python via `execute_code`, and compute calendar boundaries in the selected home's timezone with `zoneinfo`. Do not use the conversation date as a live clock.
 3. Calculate these local calendar ranges: this month from its first day to now; last month from its first day to this month's first day; this year from January 1 to now. Build a single union of required daily intervals so overlapping month and year requests are not duplicated. Account for January's previous-year last month. Compute timezone-aware boundaries, including daylight-saving changes, rather than assuming a day is always 24 hours.
 4. Query only missing or provisional history, partitioning requests into at most 31 calendar days, and also obeying the API's elapsed-time limit across DST transitions. Set `type=consumption` and `resolution=DAILY` explicitly. Interpret response timestamps and returned structure from actual tool output. Filter observations into the desired half-open ranges `[start, end)` and deduplicate by home ID and interval start/end; API boundary semantics must not cause double counting. Inspect pagination/completeness indicators if returned. If data is missing or null, mark it unavailable, not zero.
 5. Sum returned consumption `cost` fields with Python `Decimal`, preserving currency. Report what Tibber consumption cost represents; do not call it a final invoice or add guessed fixed charges, taxes, grid fees or credits. Separately show the latest included history timestamp. Month/year-to-date may exclude today or lag meter reporting; clearly state this. Never mix currencies. Calculate totals from daily records rather than adding overlapping month/year totals.
@@ -41,9 +41,9 @@ If schemas change, use the live schemas rather than guessing parameters. If Tibb
 
 ## Cache format and policy
 
-Store UTF-8 JSON in the file `~/.hera/tibber.data`, despite its `.data` extension. Use this schema:
+Store UTF-8 JSON in `$HERMES_HOME/plugin-data/tibber/tibber.json`, inside the active profile’s data directory. Expand `HERMES_HOME` from the environment; do not use a literal dollar-sign directory. Do not automatically read or migrate legacy caches outside this directory. Use this schema:
 
-    {"schema_version":1,"homes":{"HOME_ID":{"address":"...","timezone":"Europe/Amsterdam","currency":"EUR","history":{"INTERVAL_START":{"from":"...","to":"...","cost":"decimal string or null","consumption":"decimal string or null","currency":"EUR","fetched_at":"ISO timestamp","status":"complete or provisional"}},"coverage":[],"prices":{"local_date":"YYYY-MM-DD","fetched_at":"ISO timestamp","intervals":[]}}}}
+    {"schema_version":1,"selected_home_id":"HOME_ID","homes":{"HOME_ID":{"address":"...","timezone":"IANA timezone","currency":"EUR","history":{"INTERVAL_START":{"from":"...","to":"...","cost":"decimal string or null","consumption":"decimal string or null","currency":"EUR","fetched_at":"ISO timestamp","status":"complete or provisional"}},"coverage":[],"prices":{"local_date":"YYYY-MM-DD","fetched_at":"ISO timestamp","intervals":[]}}}}
 
 Populate records only from real tool output. `coverage` contains confirmed fully populated ranges, not merely requested ranges. Cached prices are optional and must not replace a fresh price query by default.
 
@@ -73,4 +73,4 @@ The price per kWh and total consumption cost are different measures. Negative pr
 
 ## Verification
 
-Before responding, confirm the primary home match, timezone-aware date boundaries, history request limits, no duplicated intervals, no fabricated zero costs, consistent currency, and minimum/maximum over all available intervals for today's local date. Calculate with Python. Validate the written JSON and that no credentials were stored. On a second run, complete covered historical intervals must cause no history queries; only missing/provisional records may be fetched. State any unverified or unavailable information plainly.
+Before responding, confirm the selected home belongs to the account, timezone-aware date boundaries, history request limits, no duplicated intervals, no fabricated zero costs, consistent currency, and minimum/maximum over all available intervals for today's local date. Calculate with Python. Validate the written JSON and that no credentials were stored. On a second run, complete covered historical intervals must cause no history queries; only missing/provisional records may be fetched. State any unverified or unavailable information plainly.
